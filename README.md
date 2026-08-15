@@ -1,274 +1,509 @@
-# UCA-CFC Connect
+# CFC Connect
 
-## Descripción del proyecto
+Sistema web para la gestión de **cursos, diplomados, inscripciones, cotizaciones y servicios complementarios** de un centro de formación.
 
-**UCA-CFC Connect** es una aplicación web empresarial desarrollada para el Centro de Formación Continua de la UCA (CFC). El sistema busca automatizar y centralizar procesos académicos y administrativos como la gestión de cursos y diplomados, inscripción de participantes, administración de clientes, cotizaciones, alquiler de espacios, solicitudes de catering, pagos y control de usuarios y roles.
+El proyecto está desarrollado con **Java y Spring Boot**, utilizando una arquitectura por capas basada en **Controller, Service y Repository**, con el objetivo de facilitar el mantenimiento, escalabilidad y futura integración con una base de datos relacional.
 
-El proyecto está planteado con una arquitectura MVC y servicios REST, utilizando Spring Boot como plataforma principal.
+---
 
-## Integrantes del equipo
- 
-* Enrique Alexander Solano Lopez SL223188
-* Adrián Alejandro Jiménez Mena JM242020
-* Mario Antonio Rivera Hernandez RH242680
-* Sergio Enrique Valencia Rosales VR242686
-* Lazaro Moises Vargas Granados VG210810
+## 📌 Descripción del proyecto
 
-## Tecnologías utilizadas
+**CFC Connect** es una aplicación web orientada a centralizar y optimizar la gestión de los servicios académicos y administrativos de un centro de formación.
 
-- **Java 21**
-- **Spring Boot**
-- **Spring MVC**
-- **Spring Security**
-- **JWT (JSON Web Token)**
-- **Spring Data JPA**
-- **Hibernate**
-- **MySQL o PostgreSQL**
-- **Swagger / OpenAPI**
-- **Maven**
-- **Git y GitHub**
+El sistema busca permitir la administración de:
 
-## Requisitos previos
+* Clientes.
+* Cursos.
+* Diplomados.
+* Inscripciones.
+* Cotizaciones.
+* Espacios.
+* Servicios de catering.
+* Pagos.
+* Usuarios.
+* Roles y permisos.
 
-Antes de ejecutar el proyecto localmente, se recomienda tener instalado:
+La primera fase del proyecto se enfoca principalmente en el **análisis, diseño y construcción de la arquitectura base**, dejando preparada la aplicación para incorporar posteriormente persistencia mediante JPA, seguridad, validaciones y funcionalidades CRUD completas.
 
-- Java 21
-- Maven
-- MySQL o PostgreSQL
-- Git
+---
 
-Puede comprobar las versiones mediante:
+## 🎯 Objetivo general
 
-```bash
-java -version
-mvn -version
-git --version
+Desarrollar una aplicación web que permita gestionar de forma centralizada los procesos académicos y administrativos de un centro de formación, facilitando el registro de clientes, cursos, diplomados, inscripciones, cotizaciones, espacios, catering y pagos.
+
+---
+
+## 🎯 Objetivos específicos
+
+* Diseñar una arquitectura organizada y escalable.
+* Implementar una API REST utilizando Spring Boot.
+* Gestionar clientes y cursos mediante endpoints REST.
+* Separar las responsabilidades mediante capas.
+* Definir el modelo de dominio del sistema.
+* Preparar la aplicación para utilizar persistencia con JPA.
+* Implementar pruebas unitarias básicas.
+* Facilitar el trabajo colaborativo mediante Git y GitHub.
+* Preparar la estructura necesaria para las siguientes fases del proyecto.
+
+---
+
+## 🛠️ Tecnologías utilizadas
+
+| Tecnología        | Uso                        |
+| ----------------- | -------------------------- |
+| Java              | Lenguaje principal         |
+| Spring Boot       | Framework backend          |
+| Spring Web        | Desarrollo de API REST     |
+| Maven             | Gestión de dependencias    |
+| JUnit             | Pruebas unitarias          |
+| Git               | Control de versiones       |
+| GitHub            | Repositorio y colaboración |
+| JPA / Hibernate   | Persistencia planificada   |
+| MySQL             | Base de datos planificada  |
+| Swagger / OpenAPI | Documentación planificada  |
+
+---
+
+## 🏗️ Arquitectura
+
+El proyecto utiliza una arquitectura por capas:
+
+```text
+Cliente
+   │
+   ▼
+Controller
+   │
+   ▼
+Service
+   │
+   ▼
+Repository
+   │
+   ▼
+Base de datos
 ```
 
-## Configuración de la base de datos
+### Controller
 
-Cree una base de datos para el proyecto. Por ejemplo, utilizando MySQL:
+Recibe las solicitudes HTTP y expone los endpoints REST de la aplicación.
 
-```sql
-CREATE DATABASE uca_cfc_connect;
+### Service
+
+Contiene la lógica de negocio y funciona como intermediario entre los controladores y los repositorios.
+
+### Repository
+
+Se encarga del acceso a los datos.
+
+En la primera fase se utiliza almacenamiento temporal en memoria como preparación para la posterior implementación de JPA.
+
+### Domain
+
+Contiene las clases que representan las entidades principales del sistema.
+
+---
+
+## 📂 Estructura del proyecto
+
+```text
+src/
+└── main/
+    └── java/
+        └── sv/
+            └── edu/
+                └── udb/
+                    └── cfcconnect/
+                        │
+                        ├── controller/
+                        │   ├── ClienteController.java
+                        │   └── CursoController.java
+                        │
+                        ├── service/
+                        │   ├── ClienteService.java
+                        │   └── CursoService.java
+                        │
+                        ├── service/
+                        │   └── implementation/
+                        │       ├── ClienteServiceImpl.java
+                        │       └── CursoServiceImpl.java
+                        │
+                        ├── repository/
+                        │   ├── ClienteRepository.java
+                        │   └── CursoRepository.java
+                        │
+                        ├── repository/
+                        │   └── domain/
+                        │       ├── Cliente.java
+                        │       └── Curso.java
+                        │
+                        └── exception/
+                            └── ResourceNotFoundException.java
 ```
 
-Luego configure las variables de entorno correspondientes.
+---
 
-### Variables de entorno
+## 📋 Módulos del sistema
+
+El proyecto contempla los siguientes módulos:
+
+| Módulo        | Descripción                                 |
+| ------------- | ------------------------------------------- |
+| Clientes      | Administración de clientes                  |
+| Cursos        | Gestión de cursos disponibles               |
+| Diplomados    | Gestión de diplomados                       |
+| Inscripciones | Registro de clientes en cursos y diplomados |
+| Cotizaciones  | Elaboración y gestión de cotizaciones       |
+| Espacios      | Administración de espacios disponibles      |
+| Catering      | Gestión de servicios de alimentación        |
+| Pagos         | Registro y control de pagos                 |
+| Usuarios      | Administración de usuarios                  |
+| Roles         | Gestión de permisos y accesos               |
+
+---
+
+# 🚀 Fase 1
+
+La primera fase está enfocada en el análisis y diseño del sistema.
+
+### Actividades realizadas
+
+* [x] Definición del proyecto.
+* [x] Identificación de los módulos principales.
+* [x] Definición inicial del modelo de dominio.
+* [x] Diseño de la arquitectura.
+* [x] Creación del proyecto Spring Boot.
+* [x] Organización de paquetes.
+* [x] Creación de modelos iniciales.
+* [x] Implementación de Repository.
+* [x] Implementación de Service.
+* [x] Implementación de Controller.
+* [x] Creación de endpoints GET.
+* [x] Pruebas unitarias básicas.
+* [ ] Persistencia completa con JPA.
+* [ ] CRUD completo.
+* [ ] Seguridad y autenticación.
+* [ ] Validaciones avanzadas.
+* [ ] Documentación Swagger completa.
+
+---
+
+# 🔌 Endpoints disponibles
+
+## Clientes
+
+### Obtener todos los clientes
+
+```http
+GET /clientes
+```
 
 Ejemplo:
 
-```text
-DB_URL=jdbc:mysql://localhost:3306/uca_cfc_connect
-DB_USERNAME=root
-DB_PASSWORD=tu_password
-JWT_SECRET=tu_clave_secreta
+```http
+GET http://localhost:8080/clientes
 ```
 
-En caso de utilizar PostgreSQL, adapte `DB_URL` al motor correspondiente:
+Respuesta:
 
-```text
-DB_URL=jdbc:postgresql://localhost:5432/uca_cfc_connect
-DB_USERNAME=postgres
-DB_PASSWORD=tu_password
-JWT_SECRET=tu_clave_secreta
+```json
+[
+    {
+        "id": 1,
+        "nombre": "Juan Pérez",
+        "correo": "juan@gmail.com",
+        "telefono": "7777-1111"
+    },
+    {
+        "id": 2,
+        "nombre": "Ana López",
+        "correo": "ana@gmail.com",
+        "telefono": "7777-2222"
+    }
+]
 ```
 
-## Configuración de Spring Boot
+### Obtener un cliente
 
-Las variables anteriores pueden utilizarse desde `application.properties`:
-
-```properties
-spring.datasource.url=${DB_URL}
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-
-jwt.secret=${JWT_SECRET}
+```http
+GET /clientes/{id}
 ```
 
-La configuración concreta puede variar según el motor de base de datos utilizado por el equipo.
+Ejemplo:
 
-## Instalación y ejecución local
+```http
+GET http://localhost:8080/clientes/1
+```
 
-### 1. Clonar el repositorio
+---
+
+## Cursos
+
+### Obtener todos los cursos
+
+```http
+GET /cursos
+```
+
+Ejemplo:
+
+```http
+GET http://localhost:8080/cursos
+```
+
+Respuesta:
+
+```json
+[
+    {
+        "id": 1,
+        "nombre": "Spring Boot",
+        "precio": 120.0,
+        "cupo": 30
+    },
+    {
+        "id": 2,
+        "nombre": "React",
+        "precio": 150.0,
+        "cupo": 25
+    }
+]
+```
+
+### Obtener un curso
+
+```http
+GET /cursos/{id}
+```
+
+Ejemplo:
+
+```http
+GET http://localhost:8080/cursos/1
+```
+
+---
+
+# ⚙️ Requisitos
+
+Para ejecutar el proyecto se recomienda tener instalado:
+
+* Java JDK 17 o superior.
+* Maven.
+* Git.
+* IntelliJ IDEA, Eclipse o Visual Studio Code.
+* Postman o una herramienta similar para probar la API.
+
+---
+
+# 📥 Instalación
+
+Clonar el repositorio:
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd uca-cfc-connect
+git clone https://github.com/USUARIO/cfc-connect.git
 ```
 
-### 2. Configurar las variables de entorno
+Ingresar al proyecto:
 
-Configure:
-
-```text
-DB_URL
-DB_USERNAME
-DB_PASSWORD
-JWT_SECRET
+```bash
+cd cfc-connect
 ```
 
-### 3. Compilar el proyecto
+Compilar el proyecto:
 
 ```bash
 mvn clean install
 ```
 
-### 4. Ejecutar las pruebas
+---
 
-```bash
-mvn test
-```
+# ▶️ Ejecución
 
-### 5. Ejecutar la aplicación
+Para ejecutar la aplicación mediante Maven:
 
 ```bash
 mvn spring-boot:run
 ```
 
-También puede ejecutar el proyecto mediante el IDE utilizando la clase principal de Spring Boot.
+También puede ejecutarse desde el IDE utilizando la clase principal de Spring Boot.
 
-Por defecto, la aplicación estará disponible en:
+La aplicación estará disponible en:
 
 ```text
 http://localhost:8080
 ```
 
-## Documentación Swagger / OpenAPI
+---
 
-Una vez que la aplicación esté ejecutándose, la documentación Swagger podrá consultarse mediante:
+# 🧪 Pruebas
 
-```text
-http://localhost:8080/swagger-ui.html
+Para ejecutar las pruebas unitarias:
+
+```bash
+mvn test
 ```
 
-o, dependiendo de la versión de Springdoc utilizada:
+Actualmente se incluyen pruebas básicas para verificar el funcionamiento de la capa de servicios.
+
+---
+
+# 🌱 Ramas de Git
+
+Para facilitar el trabajo colaborativo se recomienda utilizar ramas separadas por funcionalidad.
+
+Ejemplo:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
-```
-
-### Swagger desplegado
-
-Cuando el proyecto se encuentre desplegado, coloque aquí el enlace definitivo:
-
-```text
-https://<DOMINIO_DEL_PROYECTO>/swagger-ui/index.html
-```
-
-> **Pendiente:** sustituir el enlace anterior por la URL real una vez desplegada la aplicación.
-
-## Estructura de carpetas
-
-La estructura propuesta para el backend es:
-
-```text
-uca-cfc-connect/
+main
 │
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── sv/
-│   │   │       └── edu/
-│   │   │           └── udb/
-│   │   │               └── cfconnect/
-│   │   │                   ├── controller/
-│   │   │                   ├── service/
-│   │   │                   │   └── implementation/
-│   │   │                   ├── repository/
-│   │   │                   │   └── domain/
-│   │   │                   ├── dto/
-│   │   │                   ├── exception/
-│   │   │                   ├── security/
-│   │   │                   └── config/
-│   │   │
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       └── static/
-│   │
-│   └── test/
-│       └── java/
+├── develop
 │
-├── pom.xml
-├── README.md
-└── .gitignore
+├── feature/clientes
+├── feature/cursos
+├── feature/diplomados
+├── feature/inscripciones
+├── feature/cotizaciones
+├── feature/espacios
+├── feature/catering
+├── feature/pagos
+└── feature/seguridad
 ```
 
-### Descripción de las carpetas
-
-| Carpeta | Descripción |
-|---|---|
-| `controller` | Expone los servicios REST y recibe las solicitudes HTTP. |
-| `service` | Contiene la lógica de negocio. |
-| `service/implementation` | Implementaciones de las interfaces de servicio. |
-| `repository` | Acceso y persistencia de datos mediante Spring Data JPA. |
-| `repository/domain` | Entidades/modelos principales del sistema. |
-| `dto` | Objetos utilizados para entrada y salida de información mediante la API. |
-| `exception` | Excepciones personalizadas y manejo centralizado de errores. |
-| `security` | Configuración de Spring Security y JWT. |
-| `config` | Configuraciones generales de Spring Boot y Swagger/OpenAPI. |
-| `test` | Pruebas unitarias y de integración. |
-
-## Módulos principales
-
-El sistema contempla los siguientes módulos:
-
-1. Gestión académica
-2. Gestión de clientes
-3. Inscripciones
-4. Cotizaciones
-5. Alquiler de espacios
-6. Catering
-7. Agenda institucional
-8. Pagos
-9. Seguridad, usuarios y roles
-
-## Roles del sistema
-
-- **ADMIN**
-- **RECEPCIONISTA**
-- **CLIENTE**
-- **CONTABILIDAD**
-
-## API REST
-
-Los módulos deberán exponer servicios REST utilizando operaciones como:
-
-```text
-GET
-POST
-PUT
-DELETE
-```
-
-Además, se contempla implementar búsquedas mediante filtros, paginación y ordenamiento.
-
-## Control de versiones
-
-El proyecto utiliza Git y GitHub para el control de versiones.
-
-Se recomienda trabajar mediante ramas por funcionalidad:
+### Ejemplo de creación de una rama
 
 ```bash
 git checkout -b feature/clientes
-git checkout -b feature/cursos
-git checkout -b feature/inscripciones
-git checkout -b feature/cotizaciones
-git checkout -b feature/pagos
 ```
 
-Las funcionalidades deberán integrarse mediante Pull Requests.
+Agregar los cambios:
 
-## Estado del proyecto
+```bash
+git add .
+```
 
-**Fase actual:** Fase 1 - Planificación y Diseño.
+Crear un commit:
 
-La primera fase contempla el análisis y diseño del sistema, incluyendo el modelo de dominio, modelo de base de datos, definición de endpoints REST, mockups, flujos de procesos, plan de trabajo y estructura inicial del repositorio.
+```bash
+git commit -m "feat: implementar modulo de clientes"
+```
 
-## Licencia
+Subir la rama:
 
-Proyecto académico desarrollado para la asignatura **Desarrollo de Software Empresarial**, Escuela de Computación, Facultad de Ingeniería.
+```bash
+git push origin feature/clientes
+```
+
+---
+
+# 📝 Convención de commits
+
+Se recomienda utilizar commits descriptivos siguiendo una estructura similar a:
+
+```text
+feat: nueva funcionalidad
+fix: corrección de error
+refactor: modificación de código
+test: creación o modificación de pruebas
+docs: actualización de documentación
+style: cambios de formato
+chore: tareas de mantenimiento
+```
+
+Ejemplos:
+
+```bash
+git commit -m "feat: agregar endpoint de clientes"
+```
+
+```bash
+git commit -m "test: agregar pruebas de ClienteService"
+```
+
+```bash
+git commit -m "docs: actualizar README"
+```
+
+---
+
+# 🔮 Próximas fases
+
+## Fase 2 — Persistencia y CRUD
+
+Se incorporará:
+
+* JPA.
+* Hibernate.
+* MySQL.
+* Entidades persistentes.
+* Relaciones entre entidades.
+* CRUD completo.
+* DTOs.
+* Validaciones.
+* Manejo de excepciones.
+* Paginación y filtros.
+
+## Fase 3 — Seguridad
+
+Se contempla:
+
+* Spring Security.
+* Autenticación.
+* Autorización.
+* Roles.
+* Protección de endpoints.
+* Gestión de usuarios.
+
+## Fase 4 — Documentación y pruebas
+
+Se incorporará:
+
+* Swagger/OpenAPI.
+* Pruebas unitarias.
+* Pruebas de integración.
+* Documentación de endpoints.
+* Mejoras en el manejo de errores.
+
+## Fase 5 — Interfaz y despliegue
+
+Se contempla:
+
+* Interfaz web.
+* Integración frontend/backend.
+* Configuración para producción.
+* Despliegue.
+* Optimización.
+
+---
+
+# 👥 Equipo de desarrollo
+
+Proyecto académico desarrollado para la gestión de servicios de un centro de formación.
+
+Los integrantes del equipo pueden agregarse en esta sección:
+
+```text
+* Enrique Alexander Solano Lopez SL223188
+* Adrián Alejandro Jiménez Mena JM242020
+* Mario Antonio Rivera Hernandez RH242680
+* Sergio Enrique Valencia Rosales VR242686
+* Lazaro Moises Vargas Granados VG210810
+```
+
+---
+
+# 📄 Estado del proyecto
+
+**Estado:** En desarrollo 🚧
+
+**Fase actual:** Fase 1 — Análisis, diseño y arquitectura.
+
+El proyecto cuenta actualmente con una estructura inicial funcional basada en Spring Boot y arquitectura por capas. Las funcionalidades restantes serán incorporadas progresivamente durante las siguientes fases.
+
+---
+
+# 📜 Licencia
+
+Este proyecto fue desarrollado con fines académicos.
+
+© 2026 CFC Connect. Todos los derechos reservados.
