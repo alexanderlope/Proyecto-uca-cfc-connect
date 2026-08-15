@@ -1,4 +1,4 @@
-# CFC Connect
+# Proyecto UCA-CFC-Connect
 
 Sistema web para la gestión de **cursos, diplomados, inscripciones, cotizaciones y servicios complementarios** de un centro de formación.
 
