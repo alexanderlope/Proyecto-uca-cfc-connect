@@ -7,16 +7,12 @@
 El proyecto está planteado con una arquitectura MVC y servicios REST, utilizando Spring Boot como plataforma principal.
 
 ## Integrantes del equipo
-
-| Integrante | Responsabilidad |
-|---|---|
-| Integrante 1 | Por asignar |
-| Integrante 2 | Por asignar |
-| Integrante 3 | Por asignar |
-| Integrante 4 | Por asignar |
-| Integrante 5 | Por asignar |
-
-> **Nota:** Reemplace los nombres y responsabilidades anteriores por los datos reales del equipo.
+ 
+* Enrique Alexander Solano Lopez SL223188
+* Adrián Alejandro Jiménez Mena JM242020
+* Mario Antonio Rivera Hernandez RH242680
+* Sergio Enrique Valencia Rosales VR242686
+* Lazaro Moises Vargas Granados VG210810
 
 ## Tecnologías utilizadas
 
@@ -78,8 +74,6 @@ DB_USERNAME=postgres
 DB_PASSWORD=tu_password
 JWT_SECRET=tu_clave_secreta
 ```
-
-> No incluya contraseñas, claves JWT reales ni otras credenciales sensibles directamente en el repositorio de GitHub.
 
 ## Configuración de Spring Boot
 
