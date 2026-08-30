@@ -9,10 +9,11 @@ import java.util.List;
 
 @Service
 public class ClienteServiceImpl implements ClienteService {
+
     private final ClienteRepository repository;
 
-    public ClienteServiceImpl(ClienteRepository repository){
-        this.repository=repository;
+    public ClienteServiceImpl(ClienteRepository repository) {
+        this.repository = repository;
     }
 
     @Override
@@ -23,5 +24,20 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     public Cliente findById(Long id) {
         return repository.findById(id);
+    }
+
+    @Override
+    public Cliente save(Cliente cliente) {
+        return repository.save(cliente);
+    }
+
+    @Override
+    public Cliente update(Long id, Cliente cliente) {
+        return repository.update(id, cliente);
+    }
+
+    @Override
+    public void delete(Long id) {
+        repository.delete(id);
     }
 }

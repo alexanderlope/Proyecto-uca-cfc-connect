@@ -9,10 +9,11 @@ import java.util.List;
 
 @Service
 public class CursoServiceImpl implements CursoService {
+
     private final CursoRepository repository;
 
-    public CursoServiceImpl(CursoRepository repository){
-        this.repository=repository;
+    public CursoServiceImpl(CursoRepository repository) {
+        this.repository = repository;
     }
 
     @Override
@@ -23,5 +24,20 @@ public class CursoServiceImpl implements CursoService {
     @Override
     public Curso findById(Long id) {
         return repository.findById(id);
+    }
+
+    @Override
+    public Curso save(Curso curso) {
+        return repository.save(curso);
+    }
+
+    @Override
+    public Curso update(Long id, Curso curso) {
+        return repository.update(id, curso);
+    }
+
+    @Override
+    public void delete(Long id) {
+        repository.delete(id);
     }
 }
