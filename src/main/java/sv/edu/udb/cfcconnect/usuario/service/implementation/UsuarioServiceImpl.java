@@ -3,6 +3,7 @@ package sv.edu.udb.cfcconnect.usuario.service.implementation;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import sv.edu.udb.cfcconnect.exception.ReglaNegocioException;
 import sv.edu.udb.cfcconnect.exception.ResourceNotFoundException;
 import sv.edu.udb.cfcconnect.rol.domain.Rol;
@@ -23,6 +24,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioServiceImpl(UsuarioRepository repository,
                                RolRepository rolRepository,
                                PasswordEncoder passwordEncoder) {
+    public UsuarioServiceImpl(UsuarioRepository repository, RolRepository rolRepository, PasswordEncoder passwordEncoder) {
         this.repository = repository;
         this.rolRepository = rolRepository;
         this.passwordEncoder = passwordEncoder;
