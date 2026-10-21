@@ -59,8 +59,8 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedRoles() {
-        if (rolRepository.count() > 0) return;
         for (String nombre : new String[]{"ADMIN", "RECEPCIONISTA", "CLIENTE", "CONTABILIDAD"}) {
+            if (rolRepository.findByNombreIgnoreCase(nombre).isPresent()) continue;
             Rol rol = new Rol();
             rol.setNombre(nombre);
             rolRepository.save(rol);
