@@ -25,6 +25,8 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    // Hash BCrypt de la contrasena (nunca se guarda en texto plano).
+    // El cifrado lo aplica UsuarioServiceImpl con el PasswordEncoder de Spring Security.
     // Se almacena el hash BCrypt, nunca la contrasena en texto plano.
     @Column(nullable = false, length = 255)
     private String password;

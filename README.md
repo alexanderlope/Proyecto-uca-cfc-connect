@@ -23,7 +23,7 @@ El sistema permite administrar:
 * Usuarios.
 * Roles y permisos.
 
-La **Fase 1** se enfocó en el análisis, diseño y construcción de la arquitectura base (en memoria). La **Fase 2**, ya completada, incorporó **persistencia real con JPA/Hibernate**, **CRUD completo** en los 10 módulos, **DTOs con validaciones**, **manejo centralizado de excepciones** y **documentación Swagger/OpenAPI**.
+La **Fase 1** se enfocó en el análisis, diseño y construcción de la arquitectura base (en memoria). La **Fase 2**, ya completada, incorporó **persistencia real con JPA/Hibernate**, **CRUD completo** en los 10 módulos, **DTOs con validaciones**, **manejo centralizado de excepciones** y **documentación Swagger/OpenAPI**. La **Fase 3** agrega **seguridad**: Spring Security, **cifrado de contraseñas con BCrypt** y **autenticación con tokens JWT** (login, emisión, validación y expiración), con control de acceso por rol y protección de la administración de usuarios.
 
 ---
 
@@ -47,7 +47,7 @@ Desarrollar una aplicación web que permita gestionar de forma centralizada los 
 * [x] Documentar la API con Swagger/OpenAPI.
 * [x] Implementar pruebas unitarias básicas.
 * [x] Facilitar el trabajo colaborativo mediante Git y GitHub.
-* [ ] Seguridad y autenticación con Spring Security + JWT (Fase 3).
+* [x] Implementar seguridad y autenticación con Spring Security + JWT (Fase 3).
 
 ---
 
@@ -67,7 +67,8 @@ Desarrollar una aplicación web que permita gestionar de forma centralizada los 
 | Maven                  | Gestión de dependencias                | ✅ Implementado   |
 | JUnit 5                | Pruebas unitarias                      | ✅ Implementado   |
 | Git / GitHub            | Control de versiones y colaboración   | ✅ Implementado   |
-| Spring Security / JWT | Autenticación y autorización           | ⏳ Planificado (Fase 3) |
+| Spring Security        | Autenticación, BCrypt y control por rol | ✅ Implementado   |
+| JJWT (io.jsonwebtoken) | Emisión y validación de tokens JWT      | ✅ Implementado   |
 
 ---
 
@@ -129,16 +130,35 @@ src/
 │   │       ├── CfcConnectApplication.java
 │   │       │
 │   │       ├── config/
-│   │       │   ├── OpenApiConfig.java        # configuracion de Swagger/OpenAPI
+│   │       │   ├── OpenApiConfig.java        # configuracion de Swagger/OpenAPI (con esquema Bearer)
+│   │       │   ├── SecurityConfig.java       # Spring Security: BCrypt, cadena de filtros y reglas por rol
+│   │       │   ├── JwtProperties.java        # propiedades app.jwt.* (clave, expiracion, emisor)
 │   │       │   └── DataSeeder.java           # carga datos de prueba al iniciar (CommandLineRunner)
 │   │       │
 │   │       ├── exception/
 │   │       │   ├── ApiError.java             # formato estandar de error
 │   │       │   ├── GlobalExceptionHandler.java  # @ControllerAdvice
+│   │       │   ├── RestAuthenticationEntryPoint.java  # 401 en JSON
+│   │       │   ├── RestAccessDeniedHandler.java      # 403 en JSON
+│   │       │   ├── CredencialesInvalidasException.java
+│   │       │   ├── UsuarioInactivoException.java
 │   │       │   ├── ResourceNotFoundException.java
 │   │       │   ├── CupoAgotadoException.java
 │   │       │   ├── EspacioOcupadoException.java
 │   │       │   └── ReglaNegocioException.java
+│   │       │
+│   │       ├── seguridad/
+│   │       │   ├── controller/AuthController.java   # POST /auth/login, GET /auth/me
+│   │       │   ├── domain/UsuarioPrincipal.java     # UserDetails + roles
+│   │       │   ├── dto/AuthRequest.java
+│   │       │   ├── dto/AuthResponse.java
+│   │       │   ├── dto/SesionResponse.java
+│   │       │   ├── jwt/JwtService.java              # emision y validacion de tokens
+│   │       │   ├── jwt/JwtAuthenticationFilter.java  # filtro que lee el header Bearer
+│   │       │   ├── service/AuthService.java
+│   │       │   └── service/implementation/
+│   │       │       ├── AuthServiceImpl.java
+│   │       │       └── UsuarioDetailsServiceImpl.java
 │   │       │
 │   │       ├── cliente/
 │   │       │   ├── domain/Cliente.java
@@ -161,7 +181,11 @@ src/
 │   │
 │   └── resources/
 │       ├── application.properties          # perfil por defecto (H2)
-│       └── application-mysql.properties     # perfil MySQL
+│       ├── application-mysql.properties     # perfil MySQL
+│       └── static/                         # panel web (frontend)
+│           ├── index.html                  # estructura + pantalla de login
+│           ├── app.js                      # lógica del panel + manejo del token JWT
+│           └── app.css                     # estilos del panel
 │
 └── test/
     └── java/sv/edu/udb/cfcconnect/...
@@ -240,16 +264,99 @@ Cada modulo de negocio replica el mismo patron (`domain`, `dto`, `repository`, `
 
 ### Pendiente para próximas fases
 
-* [ ] Seguridad y autenticación con Spring Security + JWT.
-* [ ] Paginación, filtros y ordenamiento en los listados (`GET`).
-* [ ] Pruebas unitarias con Mockito para todos los servicios (casos de éxito y de fallo de negocio).
+* [x] Paginación, filtros y ordenamiento en los listados (`GET`) — endpoints `/{modulo}/buscar` (traído de `upstream/main`).
+* [ ] Pruebas unitarias con Mockito para **todos** los servicios (ya hay de curso, espacio e inscripción).
 * [ ] Relación N:M real entre `Cotizacion` y los ítems que incluye (tabla `detalle_cotizacion`).
+
+---
+
+# 🚀 Fase 3 — Seguridad: Spring Security, BCrypt y JWT ✅
+
+### Actividades realizadas
+
+* [x] **Dependencias**: se agregó `spring-boot-starter-security` (Spring Security 6.3) y `io.jsonwebtoken` (JJWT 0.12.6: `jjwt-api`, `jjwt-impl`, `jjwt-jackson`), además de `spring-security-test` para las pruebas.
+* [x] **Cifrado de contraseñas con BCrypt**: se declaró el bean `PasswordEncoder` (`BCryptPasswordEncoder`) en `SecurityConfig`. `UsuarioServiceImpl` cifra la contraseña **antes de guardarla** (tanto al crear como al actualizar un usuario), por lo que en la tabla `usuarios` solo se almacena el hash `$2a$...`; el texto plano nunca se persiste ni se devuelve en las respuestas.
+* [x] **Login con JWT** (`POST /auth/login`): se creó el módulo `seguridad` con `AuthController`, `AuthService`/`AuthServiceImpl`, `JwtService` y `JwtAuthenticationFilter`. Las credenciales se validan contra el hash BCrypt mediante el `AuthenticationManager` de Spring Security y, si son correctas, se emite un token JWT firmado con **HS256**.
+* [x] **Emisión del token**: `JwtService` construye el token con los claims `sub` (correo), `rol` (ADMIN, RECEPCIONISTA, CLIENTE, CONTABILIDAD), `iss` (emisor), `iat` y `exp`.
+* [x] **Validación del token**: `JwtAuthenticationFilter` (un `OncePerRequestFilter`) lee la cabecera `Authorization: Bearer <token>` en cada petición, verifica la firma y la expiración, recarga el usuario desde la base de datos y establece la autenticación en el contexto de seguridad. Un token inválido, alterado o expirado deja la petición sin autenticar y termina en un `401`.
+* [x] **Expiración configurable**: la validez del token se define en `app.jwt.expiration-seconds` (por defecto **3600 s = 1 hora**) y se devuelve en la respuesta del login (`expiresIn` y `expiracion`).
+* [x] **Modo *stateless***: sin sesiones HTTP (`SessionCreationPolicy.STATELESS`) y sin CSRF, ya que la autenticación viaja en la cabecera `Authorization`.
+* [x] **Protección de la administración de usuarios**: `/usuarios/**` y `/roles/**` exigen el rol **ADMIN**; el resto de los endpoints exigen un usuario autenticado. Las respuestas `401` y `403` se devuelven en el mismo formato `ApiError` JSON del resto de la API (`RestAuthenticationEntryPoint` y `RestAccessDeniedHandler`).
+* [x] **Usuarios inactivos**: un usuario con `estado = false` no puede iniciar sesión (`403`).
+* [x] **Usuarios de prueba**: el `DataSeeder` crea un administrador y un recepcionista con la contraseña cifrada con BCrypt para poder probar el flujo de inmediato. Se comprueban **por correo** (no solo si la tabla está vacía), para que siempre exista un administrador con el que entrar, incluso en una base de datos MySQL que ya tenga usuarios de la Fase 2.
+* [x] **Migración de contraseñas de la Fase 2**: al arrancar, las contraseñas que quedaron guardadas **en texto plano** en bases de datos con datos previos se re-cifran con BCrypt. Sin este paso, esos usuarios no podrían iniciar sesión (el login compara contra el hash). Solo se tocan las contraseñas que aún no están cifradas (las que no empiezan por `$2`).
+* [x] **Swagger con autenticación**: se registró el esquema de seguridad `bearerAuth` en el documento OpenAPI, de modo que en Swagger UI se puede autorizar con el token mediante el botón **Authorize**.
+* [x] **Pruebas**: se agregaron `JwtServiceTest` (emisión, validación, token alterado, expiración y BCrypt), `AuthServiceTest` (login correcto e incorrecto), `SecurityIntegrationTest` (`401` sin token, `403` sin rol ADMIN, `200` con token válido) y `DataSeederTest` (migración de contraseñas legacy).
+
+### Configuración
+
+```properties
+# Clave de firma (Base64, minimo 32 bytes). Generar con: openssl rand -base64 32
+app.jwt.secret=${APP_JWT_SECRET:YmRkZmQ5ODQ4MTg3NDRkNzk0MWM1NmM4MmMxZWE0Zjg=}
+# Duracion del token en segundos (3600 = 1 hora)
+app.jwt.expiration-seconds=3600
+app.jwt.issuer=uca-cfc-connect
+```
+
+> En producción la clave **debe** sobreescribirse con la variable de entorno `APP_JWT_SECRET`.
+
+### Credenciales de prueba
+
+| Rol | Correo | Contraseña |
+|---|---|---|
+| ADMIN | `admin@cfc.edu.sv` | `Admin123*` |
+| RECEPCIONISTA | `recepcion@cfc.edu.sv` | `Recepcion123*` |
+
+### Flujo de uso
+
+```text
+1. POST /auth/login        -> recibe el token JWT
+2. GET /clientes           -> Authorization: Bearer <token>
+```
 
 ---
 
 # 🔌 Endpoints disponibles
 
 Todos los endpoints devuelven y reciben JSON. Los que reciben cuerpo (`POST` / `PUT`) validan el DTO con `@Valid` antes de ejecutar la lógica de negocio.
+
+> ⚠️ **Desde la Fase 3 todos los endpoints requieren un token JWT**, excepto `POST /auth/login`, la documentación de Swagger (`/swagger-ui/**`, `/v3/api-docs/**`) y la consola H2 (`/h2-console/**`).
+
+## Autenticación — `/auth`
+
+| Método | Endpoint | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/auth/login` | Público | Iniciar sesión y obtener el token JWT |
+| GET | `/auth/me` | Autenticado | Datos del usuario autenticado y sus roles |
+
+```http
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cfc.edu.sv",
+  "password": "Admin123*"
+}
+```
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjZmMu...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "expiracion": "2026-10-20T19:21:48",
+  "email": "admin@cfc.edu.sv",
+  "nombre": "Administrador CFC",
+  "rol": "ADMIN"
+}
+```
+
+Con el token se accede al resto de la API:
+
+```http
+GET http://localhost:8080/usuarios
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjZmMu...
+```
 
 ## Clientes — `/clientes`
 
@@ -379,9 +486,54 @@ CRUD estándar: `GET`, `GET /{id}`, `POST`, `PUT`, `DELETE` sobre los servicios 
 
 `tipoReferencia`: `INSCRIPCION`, `COTIZACION`, `ESPACIO`, `CATERING`. `metodo`: `EFECTIVO`, `TARJETA`, `TRANSFERENCIA`, `DEPOSITO`.
 
+## Búsquedas con filtros y paginación — `/{modulo}/buscar`
+
+Endpoints de búsqueda paginada (traídos de `upstream/main`, rama `feature/busquedas-y-pruebas`). Devuelven un `Page` de Spring Data.
+
+| Método | Endpoint | Filtros | Orden por defecto |
+|---|---|---|---|
+| GET | `/clientes/buscar` | `nombre`, `correo` | `nombre` |
+| GET | `/cursos/buscar` | `nombre`, `soloConCupo` | `nombre` |
+| GET | `/diplomados/buscar` | `nombre`, `soloConCupo` | `nombre` |
+
+Parámetros de paginación y ordenamiento (comunes a los tres):
+
+* `page` — número de página (desde 0).
+* `size` — registros por página (por defecto **10**).
+* `sort` — campo y sentido, por ejemplo `sort=precio,desc`.
+
+```http
+GET http://localhost:8080/cursos/buscar?nombre=Spring&soloConCupo=true&page=0&size=5&sort=precio,desc
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+```json
+{
+  "content": [ { "id": 1, "nombre": "Spring Boot", "precio": 120.0, "cupo": 30 } ],
+  "pageable": { "pageNumber": 0, "pageSize": 5, "sort": { "precio": "desc" } },
+  "totalElements": 1,
+  "totalPages": 1,
+  "number": 0,
+  "size": 5
+}
+```
+
 ## Usuarios — `/usuarios` y Roles — `/roles`
 
 CRUD estándar (`GET`, `GET /{id}`, `POST`, `PUT`, `DELETE`). Un usuario requiere un `rolId` válido; el `password` nunca se devuelve en las respuestas.
+
+> 🔒 **Acceso restringido**: estos endpoints requieren el rol **ADMIN**. Un usuario autenticado con otro rol recibe `403 Forbidden`; sin token, `401 Unauthorized`.
+
+| Método | Endpoint | Rol |
+|---|---|---|
+| GET | `/usuarios` | ADMIN |
+| GET | `/usuarios/{id}` | ADMIN |
+| POST | `/usuarios` | ADMIN |
+| PUT | `/usuarios/{id}` | ADMIN |
+| DELETE | `/usuarios/{id}` | ADMIN |
+| GET/POST/PUT/DELETE | `/roles/**` | ADMIN |
+
+Al crear o actualizar un usuario, la contraseña se recibe en texto plano pero **se almacena cifrada con BCrypt**: nunca se guarda ni se devuelve en texto plano.
 
 ---
 
@@ -412,6 +564,16 @@ http://localhost:8080/h2-console
 * JDBC URL: `jdbc:h2:mem:cfcconnect`
 * Usuario: `sa`
 * Contraseña: *(vacía)*
+
+> ⚠️ **Ojo con el formulario:** H2 viene con `jdbc:h2:~/test` por defecto y **Spring Boot no lo cambia**. Si se pulsa *Connect* sin editarlo, H2 intenta abrir `C:\Users\<tu-usuario>\test` y falla con el error `Database "C:/Users/marri/test" not found ... [90149-224]`. Hay que **borrar ese valor y escribir `jdbc:h2:mem:cfcconnect`** para ver los datos reales de la aplicación (la consola se ejecuta dentro de la JVM de la app, por eso alcanza la base en memoria).
+
+Para comprobar que las contraseñas se guardan cifradas:
+
+```sql
+SELECT email, password FROM usuarios;
+```
+
+Los valores empiezan por `$2a$10$...` (hash BCrypt), nunca la contraseña en texto plano.
 
 ---
 
@@ -481,19 +643,63 @@ La aplicación estará disponible en:
 http://localhost:8080
 ```
 
-Al iniciar, el `DataSeeder` carga automáticamente datos de prueba (roles, clientes, cursos, diplomados, espacios y catering) para poder probar la API de inmediato.
+Al iniciar, el `DataSeeder` carga automáticamente datos de prueba (roles, clientes, cursos, diplomados, espacios, catering y usuarios) para poder probar la API de inmediato.
+
+## 🖥️ Panel web (frontend)
+
+| Qué | URL |
+|---|---|
+| **Panel web** | `http://localhost:8080` → pide iniciar sesión |
+| **Swagger UI** (botón *Authorize*) | `http://localhost:8080/swagger-ui.html` |
+| **Info de la API** | `http://localhost:8080/api/info` |
+| **Login** | `http://localhost:8080/auth/login` |
+| **Consola H2** | `http://localhost:8080/h2-console` → usar `jdbc:h2:mem:cfcconnect` |
+| **Pruebas (12 casos)** | `docs/test-seguridad.http` |
+
+El panel de gestión vive en `src/main/resources/static/` (`index.html`, `app.js`, `app.css`) y lo sirve Spring Boot en la raíz. Desde la Fase 3 **exige autenticación**:
+
+1. Al abrir `http://localhost:8080` se muestra la pantalla de **Iniciar sesión**.
+2. Se hace `POST /auth/login` y el **token JWT** se guarda en `localStorage`.
+3. A partir de ahí, cada petición del panel incluye la cabecera `Authorization: Bearer <token>`.
+4. El botón ⏻ de la barra lateral cierra sesión (borra el token y vuelve al login).
+5. Si el token expira o es inválido, la API responde `401` y el panel vuelve a pedir el login.
+
+El control de acceso por rol se nota en la interfaz: con el usuario `RECEPCIONISTA`, los módulos **Usuarios** y **Roles** muestran *"No tienes permisos para esta operacion (se requiere rol ADMIN)"*, porque el backend responde `403`.
+
+> Los recursos estáticos se sirven con `Cache-Control: no-cache` (ver `application.properties`) para que los cambios del frontend se vean al recargar, y además llevan versionado (`/app.js?v=0.3.0`).
+
+> 🔐 Como la API está protegida, el primer paso para probarla es **iniciar sesión**:
+>
+> ```bash
+> curl -X POST http://localhost:8080/auth/login \
+>   -H "Content-Type: application/json" \
+>   -d '{"email":"admin@cfc.edu.sv","password":"Admin123*"}'
+> ```
+>
+> y usar el `token` devuelto en la cabecera `Authorization: Bearer <token>`.
 
 ---
 
 # 🧪 Pruebas
 
-Para ejecutar las pruebas unitarias:
+Para ejecutar las pruebas:
 
 ```bash
 mvn test
 ```
 
-Actualmente se incluyen pruebas básicas para verificar el funcionamiento de la capa de servicios. La ampliación de pruebas unitarias con JUnit 5 y Mockito (casos de éxito y de fallo de negocio para cada módulo) está planificada como siguiente paso.
+Actualmente se incluyen pruebas de la capa de servicios y de la seguridad:
+
+| Prueba | Qué verifica |
+|---|---|
+| `ClienteServiceTest` | Consulta de clientes sembrados en la base de datos |
+| `CfcConnectApplicationTests` | Carga del contexto de Spring Boot |
+| `JwtServiceTest` | Emisión y validación de tokens, token alterado, expiración y cifrado BCrypt |
+| `AuthServiceTest` | Login correcto, contraseña incorrecta y correo inexistente |
+| `SecurityIntegrationTest` | `401` sin token, `403` sin rol ADMIN, `200` con token válido y acceso a la documentación |
+| `DataSeederTest` | Migración de contraseñas en texto plano (Fase 2) a BCrypt y no duplicación de usuarios |
+
+La ampliación de pruebas unitarias con JUnit 5 y Mockito (casos de éxito y de fallo de negocio para cada módulo) está planificada como siguiente paso.
 
 ---
 
@@ -577,20 +783,20 @@ git commit -m "docs: actualizar README con avances de la Fase 2"
 
 # 🔮 Próximas fases
 
-## Fase 3 — Seguridad
+## Fase 3 — Seguridad ✅
 
-* Spring Security.
-* Autenticación con JWT.
-* Autorización por rol (`ADMIN`, `RECEPCIONISTA`, `CLIENTE`, `CONTABILIDAD`).
-* Cifrado de contraseñas con `PasswordEncoder` (BCrypt).
-* Protección de endpoints según el rol del usuario autenticado.
+* [x] Spring Security.
+* [x] Autenticación con JWT.
+* [x] Autorización por rol (`ADMIN`, `RECEPCIONISTA`, `CLIENTE`, `CONTABILIDAD`).
+* [x] Cifrado de contraseñas con `PasswordEncoder` (BCrypt).
+* [x] Protección de endpoints según el rol del usuario autenticado.
 
 ## Fase 4 — Pruebas y refinamiento
 
 * Pruebas unitarias completas con JUnit 5 + Mockito (casos de éxito y de fallo de negocio en cada servicio).
-* Pruebas de integración de los endpoints.
 * Paginación, filtros y ordenamiento en los listados.
 * Relación N:M real entre `Cotizacion` y sus ítems (tabla `detalle_cotizacion`).
+* Renovación de tokens (refresh token) y cierre de sesión.
 
 ## Fase 5 — Interfaz y despliegue
 
@@ -620,9 +826,9 @@ Proyecto académico desarrollado para la gestión de servicios de un centro de f
 
 **Estado:** En desarrollo 🚧
 
-**Fase actual:** Fase 2 completada — Persistencia JPA, CRUD completo, validaciones, manejo de excepciones y Swagger.
+**Fase actual:** Fase 3 completada — Spring Security, cifrado de contraseñas con BCrypt y autenticación JWT.
 
-El proyecto cuenta con los 10 módulos del sistema implementados con arquitectura por capas, persistencia real en base de datos (H2/MySQL), DTOs con validaciones, manejo centralizado de errores y documentación interactiva vía Swagger. Las siguientes fases incorporarán seguridad (Spring Security + JWT), pruebas unitarias completas y la interfaz web.
+El proyecto cuenta con los 10 módulos del sistema implementados con arquitectura por capas, persistencia real en base de datos (H2/MySQL), DTOs con validaciones, manejo centralizado de errores, documentación interactiva vía Swagger y **seguridad completa**: autenticación JWT sin estado, contraseñas cifradas con BCrypt y control de acceso por rol (la administración de usuarios y roles exige el rol `ADMIN`). Las siguientes fases incorporarán pruebas unitarias completas con Mockito, paginación y la interfaz web.
 
 ---
 
