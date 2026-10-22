@@ -1,11 +1,16 @@
 package sv.edu.udb.cfcconnect.cotizacion.controller;
 
+import sv.edu.udb.cfcconnect.cotizacion.domain.Cotizacion;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import sv.edu.udb.cfcconnect.cotizacion.dto.CotizacionRequest;
 import sv.edu.udb.cfcconnect.cotizacion.dto.CotizacionResponse;
 import sv.edu.udb.cfcconnect.cotizacion.service.CotizacionService;
+import sv.edu.udb.cfcconnect.cliente.repository.ClienteRepository;
 
 @RestController
 @RequestMapping("/cotizaciones")
@@ -25,15 +31,20 @@ import sv.edu.udb.cfcconnect.cotizacion.service.CotizacionService;
 public class CotizacionController {
 
     private final CotizacionService service;
+    private final ClienteRepository clienteRepository;
 
-    public CotizacionController(CotizacionService service) {
+    public CotizacionController(CotizacionService service, ClienteRepository clienteRepository) {
         this.service = service;
+        this.clienteRepository = clienteRepository;
     }
 
-    @Operation(summary = "Listar todas las cotizaciones")
+    @Operation(summary = "Listar cotizaciones",
+            description = "Filtros opcionales: ?clienteId= y/o ?estado=PENDIENTE|EN_PROCESO|APROBADA|RECHAZADA. Sin filtros devuelve todas.")
     @GetMapping
-    public List<CotizacionResponse> getCotizaciones() {
-        return service.findAll();
+    public List<CotizacionResponse> getCotizaciones(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Cotizacion.Estado estado) {
+        return service.buscar(clienteId, estado);
     }
 
     @Operation(summary = "Obtener una cotizacion por id")
@@ -45,7 +56,13 @@ public class CotizacionController {
     @Operation(summary = "Solicitar una nueva cotizacion",
             description = "tipo debe ser CURSO, DIPLOMADO, ESPACIO, CATERING o COMBINADO. Queda en estado PENDIENTE.")
     @PostMapping
-    public ResponseEntity<CotizacionResponse> crearCotizacion(@Valid @RequestBody CotizacionRequest request) {
+    public ResponseEntity<CotizacionResponse> crearCotizacion(@Valid @RequestBody CotizacionRequest request,
+                                                               @AuthenticationPrincipal UserDetails usuario) {
+        if (usuario.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"))) {
+            request.setClienteId(clienteRepository.findByCorreoIgnoreCase(usuario.getUsername())
+                    .orElseThrow(() -> new AccessDeniedException("El usuario no esta vinculado a un cliente"))
+                    .getId());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 

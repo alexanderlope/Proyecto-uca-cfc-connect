@@ -1,6 +1,7 @@
 package sv.edu.udb.cfcconnect.cliente.service.implementation;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import sv.edu.udb.cfcconnect.cliente.domain.Cliente;
 import sv.edu.udb.cfcconnect.cliente.dto.ClienteRequest;
@@ -9,6 +10,8 @@ import sv.edu.udb.cfcconnect.cliente.repository.ClienteRepository;
 import sv.edu.udb.cfcconnect.cliente.service.ClienteService;
 import sv.edu.udb.cfcconnect.exception.ReglaNegocioException;
 import sv.edu.udb.cfcconnect.exception.ResourceNotFoundException;
+
+import java.util.List;
 
 @Service
 public class ClienteServiceImpl implements ClienteService {
@@ -73,5 +76,12 @@ public class ClienteServiceImpl implements ClienteService {
     private Cliente getEntity(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Cliente", id));
+    }
+
+    @Override
+    public Page<ClienteResponse> buscar(String nombre, String correo, Pageable pageable) {
+        String n = nombre == null ? "" : nombre.trim();
+        String c = correo == null ? "" : correo.trim();
+        return repository.buscar(n, c, pageable).map(ClienteResponse::fromEntity);
     }
 }

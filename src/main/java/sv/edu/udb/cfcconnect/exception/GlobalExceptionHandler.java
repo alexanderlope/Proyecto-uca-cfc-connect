@@ -3,11 +3,22 @@ package sv.edu.udb.cfcconnect.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Manejo centralizado de excepciones para toda la API REST del proyecto.
@@ -21,6 +32,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     // 404 - el recurso solicitado (Cliente, Curso, Espacio, etc.) no existe.
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
@@ -33,6 +50,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({CupoAgotadoException.class, EspacioOcupadoException.class, ReglaNegocioException.class})
     public ResponseEntity<ApiError> handleBusinessRule(RuntimeException ex, HttpServletRequest request) {
         ApiError error = ApiError.of(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    // Conflictos de unicidad o claves foraneas detectados finalmente por MySQL/JPA.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.CONFLICT.value(), "Conflict",
+                "La operacion viola una restriccion de datos", request.getRequestURI());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
@@ -58,12 +83,103 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
+    // 401 - las credenciales del login no son validas (correo o contrasena).
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(CredencialesInvalidasException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.UNAUTHORIZED.value(), "Unauthorized", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    // 403 - el usuario esta inactivo (estado = false) e intenta iniciar sesion.
+    @ExceptionHandler(UsuarioInactivoException.class)
+    public ResponseEntity<ApiError> handleInactiveUser(UsuarioInactivoException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    // 405 - el endpoint existe pero no admite el metodo HTTP utilizado
+    // (por ejemplo, GET /auth/login, cuando el login solo admite POST).
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex,
+                                                              HttpServletRequest request) {
+        StringBuilder mensaje = new StringBuilder("El endpoint ")
+                .append(request.getRequestURI())
+                .append(" no admite el metodo ")
+                .append(ex.getMethod());
+
+        ResponseEntity.BodyBuilder respuesta = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+
+        if (ex.getSupportedHttpMethods() != null && !ex.getSupportedHttpMethods().isEmpty()) {
+            String permitidos = ex.getSupportedHttpMethods().stream()
+                    .map(HttpMethod::name)
+                    .collect(Collectors.joining(", "));
+            mensaje.append(". Metodos permitidos: ").append(permitidos);
+            respuesta = respuesta.header(HttpHeaders.ALLOW, permitidos);
+        }
+
+        ApiError error = ApiError.of(HttpStatus.METHOD_NOT_ALLOWED.value(), "Method Not Allowed",
+                mensaje.toString(), request.getRequestURI());
+        return respuesta.body(error);
+    }
+
+    // 400 - el cuerpo JSON enviado no se pudo leer (mal formado, tipo
+    // incorrecto, etc.). Sin este handler caeria en el 500 generico.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                          HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                "El cuerpo de la peticion no es valido: se espera un JSON con el formato correcto",
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // 400 - falta un parametro obligatorio en la URL o en la query string.
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex,
+                                                           HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                "Falta el parametro obligatorio '" + ex.getParameterName() + "'",
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // 400 - el tipo de un parametro no coincide con el esperado
+    // (por ejemplo, un id que no es numerico).
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                        HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                "El valor '" + ex.getValue() + "' no es valido para el parametro '" + ex.getName() + "'",
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // 415 - el Content-Type de la peticion no es compatible con el endpoint
+    // (por ejemplo, enviar texto plano a un endpoint que espera JSON).
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
+                                                                 HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "Unsupported Media Type",
+                "El tipo de contenido '" + ex.getContentType() + "' no es soportado por este endpoint",
+                request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error);
+    }
+
+    // 404 - la ruta solicitada no existe (Spring 6.1+ lanza NoResourceFoundException).
+    // Sin este handler caeria en el 500 generico.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.NOT_FOUND.value(), "Not Found",
+                "El recurso " + request.getRequestURI() + " no existe", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
     // 500 - cualquier otra excepcion no controlada explicitamente.
     // Siempre debe ir de ultimo: es la red de seguridad final.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
         ApiError error = ApiError.of(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
-                ex.getMessage(), request.getRequestURI());
+                "Ocurrio un error inesperado", request.getRequestURI());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

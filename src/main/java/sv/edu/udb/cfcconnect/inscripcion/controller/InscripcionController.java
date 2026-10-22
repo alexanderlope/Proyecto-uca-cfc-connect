@@ -6,6 +6,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import sv.edu.udb.cfcconnect.inscripcion.dto.InscripcionRequest;
 import sv.edu.udb.cfcconnect.inscripcion.dto.InscripcionResponse;
 import sv.edu.udb.cfcconnect.inscripcion.service.InscripcionService;
+import sv.edu.udb.cfcconnect.cliente.repository.ClienteRepository;
 
 @RestController
 @RequestMapping("/inscripciones")
@@ -26,15 +30,20 @@ import sv.edu.udb.cfcconnect.inscripcion.service.InscripcionService;
 public class InscripcionController {
 
     private final InscripcionService service;
+    private final ClienteRepository clienteRepository;
 
-    public InscripcionController(InscripcionService service) {
+    public InscripcionController(InscripcionService service, ClienteRepository clienteRepository) {
         this.service = service;
+        this.clienteRepository = clienteRepository;
     }
 
-    @Operation(summary = "Listar todas las inscripciones")
+    @Operation(summary = "Listar inscripciones",
+            description = "Filtros opcionales: ?clienteId= y/o ?cursoId=. Sin filtros devuelve todas.")
     @GetMapping
-    public List<InscripcionResponse> getInscripciones() {
-        return service.findAll();
+    public List<InscripcionResponse> getInscripciones(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Long cursoId) {
+        return service.buscar(clienteId, cursoId);
     }
 
     @Operation(summary = "Obtener una inscripcion por id")
@@ -46,7 +55,13 @@ public class InscripcionController {
     @Operation(summary = "Registrar una nueva inscripcion",
             description = "Valida que el cliente y el curso existan, y que el curso tenga cupo disponible (CupoAgotadoException si no).")
     @PostMapping
-    public ResponseEntity<InscripcionResponse> crearInscripcion(@Valid @RequestBody InscripcionRequest request) {
+    public ResponseEntity<InscripcionResponse> crearInscripcion(@Valid @RequestBody InscripcionRequest request,
+                                                                 @AuthenticationPrincipal UserDetails usuario) {
+        if (usuario.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"))) {
+            request.setClienteId(clienteRepository.findByCorreoIgnoreCase(usuario.getUsername())
+                    .orElseThrow(() -> new AccessDeniedException("El usuario no esta vinculado a un cliente"))
+                    .getId());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
     }
 
